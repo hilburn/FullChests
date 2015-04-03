@@ -37,6 +37,11 @@ public class ASMString
         return "L" + getASMClassName() +";";
     }
 
+    public String getObfASMTypeName()
+    {
+        return getASMTypeName();
+    }
+
     public static class ASMObfString extends ASMString
     {
         private String obfText;
@@ -47,9 +52,9 @@ public class ASMString
         }
 
         @Override
-        public String getASMClassName()
+        public String getObfASMTypeName()
         {
-            return OBFUSCATED ? obfText : super.getASMClassName();
+            return OBFUSCATED? "L" + obfText +";": getASMTypeName();
         }
 
         @Override

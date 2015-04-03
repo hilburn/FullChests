@@ -1,4 +1,4 @@
-package expansivechests;
+package fullchests;
 
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.ModMetadata;
@@ -6,19 +6,17 @@ import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLLoadCompleteEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
-import expansivechests.hooks.ChestHooks;
-import expansivechests.reference.Metadata;
-import expansivechests.reference.Reference;
+import fullchests.reference.Metadata;
+import fullchests.reference.Reference;
 import net.minecraft.init.Items;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.util.ChatComponentText;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 
-@Mod(modid = Reference.ID, name = Reference.NAME, version = Reference.VERSION_FULL)
+//@Mod(modid = Reference.ID, name = Reference.NAME, version = Reference.VERSION_FULL)
 public class ExpansiveChests
 {
     @Mod.Instance(Reference.ID)
@@ -53,23 +51,23 @@ public class ExpansiveChests
             {
 //            e.entityPlayer.addChatComponentMessage(new ChatComponentText("Metadata: " + e.world.getBlockMetadata(e.x, e.y, e.z)));
                 TileEntity te = e.world.getTileEntity(e.x, e.y, e.z);
-//            if (te instanceof IInventory)
-//            {
-//                IInventory inventory = (IInventory) te;
-//                for (int i = 0; i<inventory.getSizeInventory(); i++)
-//                {
-//                    ItemStack stack = inventory.getStackInSlot(i);
-//                    if (stack != null)
-//                    {
-//                        e.entityPlayer.addChatComponentMessage(new ChatComponentText("Slot: "+ i + ": "+stack.getDisplayName()));
-//                    }
-//                }
-//            }
-                if (te instanceof TileEntityChest)
+                if (te instanceof IInventory)
                 {
-                    e.entityPlayer.addChatComponentMessage(new ChatComponentText("Direction: " + ChestHooks.getSafeDirection((TileEntityChest)te)));
+                    IInventory inventory = (IInventory) te;
+                    for (int i = 0; i<inventory.getSizeInventory(); i++)
+                    {
+                        ItemStack stack = inventory.getStackInSlot(i);
+                        if (stack != null)
+                        {
+                            e.entityPlayer.addChatComponentMessage(new ChatComponentText("Slot: "+ i + ": "+stack.getDisplayName()));
+                        }
+                    }
                 }
-                e.setCanceled(true);
+//                if (te instanceof TileEntityChest)
+//                {
+//                    e.entityPlayer.addChatComponentMessage(new ChatComponentText("Direction: " + ChestHooks.getSafeDirection((TileEntityChest)te)));
+//                }
+//                e.setCanceled(true);
             }
         }
     }

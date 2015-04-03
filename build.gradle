@@ -56,8 +56,8 @@ dependencies {
 	compile fileTree(dir: 'lib', include: '*.jar')
 }
 
-group = "ExpansiveChests"
-archivesBaseName = "ExpansiveChests"
+group = "FullChests"
+archivesBaseName = "FullChests"
 
 minecraft {
     version = "${config.version.minecraft}-${config.version.forge}"
@@ -76,9 +76,9 @@ allprojects {
 
     jar {
         manifest {
-            attributes 'FMLCorePlugin': 'expansivechests.asm.LoadingPlugin'
-            attributes 'FMLCorePluginContainsFMLMod': 'true'
-            attributes 'FMLAT': 'expansivechests_at.cfg'
+            attributes 'FMLCorePlugin': 'fullchests.asm.LoadingPlugin'
+            //attributes 'FMLCorePluginContainsFMLMod': 'false'
+            attributes 'FMLAT': 'fullchests_at.cfg'
         }
         dependsOn ":copyBuildXml"
         destinationDir = file (rootProject.getRootDir().getPath() + '/output')

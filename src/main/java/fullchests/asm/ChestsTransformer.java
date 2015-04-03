@@ -1,4 +1,4 @@
-package expansivechests.asm;
+package fullchests.asm;
 
 import hilburnlib.asm.ASMHelper;
 import hilburnlib.asm.Transformer;
@@ -13,7 +13,7 @@ import java.util.Map;
 
 public class ChestsTransformer implements IClassTransformer, Opcodes
 {
-    private static ASMString chestHooks = new ASMString("expansivechests.hooks.ChestHooks");
+    private static ASMString chestHooks = new ASMString("fullchests.hooks.ChestHooks");
     private static ASMString chestTile = new ASMString.ASMObfString("net.minecraft.tileentity.TileEntityChest","aow");
     private static ASMString chestBlock = new ASMString.ASMObfString("net.minecraft.block.BlockChest", "ajx");
     private static ASMString forgeDirection = new ASMString(ForgeDirection.class);
@@ -24,7 +24,7 @@ public class ChestsTransformer implements IClassTransformer, Opcodes
 
     public static int CHEST_SIZE;
 
-    private static Transformer.MethodTransformer getInventorySize = new Transformer.MethodTransformer("getSizeInventory", "func_70302_i_", "()I")
+    private static Transformer.MethodTransformer getInventorySize = new Transformer.MethodTransformer("getSizeInventory", "a", "()I")
     {
         @Override
         protected void modify(MethodNode node)
@@ -38,7 +38,7 @@ public class ChestsTransformer implements IClassTransformer, Opcodes
         }
     };
 
-    private static Transformer.MethodTransformer getStackInSlot = new Transformer.MethodTransformer("getStackInSlot", "func_70301_a", "(I)"+itemStack.getASMTypeName())
+    private static Transformer.MethodTransformer getStackInSlot = new Transformer.MethodTransformer("getStackInSlot", "a", "(I)"+itemStack.getObfASMTypeName())
     {
         @Override
         protected void modify(MethodNode node)
@@ -50,7 +50,7 @@ public class ChestsTransformer implements IClassTransformer, Opcodes
             node.instructions.add(new InsnNode(ARETURN));
         }
     };
-    private static Transformer.MethodTransformer decrStackSize = new Transformer.MethodTransformer("decrStackSize", "func_75209_a", "(II)"+itemStack.getASMTypeName())
+    private static Transformer.MethodTransformer decrStackSize = new Transformer.MethodTransformer("decrStackSize", "a", "(II)"+itemStack.getObfASMTypeName())
     {
         @Override
         protected void modify(MethodNode node)
@@ -64,7 +64,7 @@ public class ChestsTransformer implements IClassTransformer, Opcodes
             node.instructions.add(new InsnNode(ARETURN));
         }
     };
-    private static Transformer.MethodTransformer openInventory = new Transformer.MethodTransformer("openInventory", "()V")
+    private static Transformer.MethodTransformer openInventory = new Transformer.MethodTransformer("openInventory", "f", "()V")
     {
         @Override
         protected void modify(MethodNode node)
@@ -75,7 +75,7 @@ public class ChestsTransformer implements IClassTransformer, Opcodes
             node.instructions.add(new InsnNode(RETURN));
         }
     };
-    private static Transformer.MethodTransformer closeInventory = new Transformer.MethodTransformer("closeInventory", "()V")
+    private static Transformer.MethodTransformer closeInventory = new Transformer.MethodTransformer("closeInventory", "l_", "()V")
     {
         @Override
         protected void modify(MethodNode node)
@@ -86,7 +86,7 @@ public class ChestsTransformer implements IClassTransformer, Opcodes
             node.instructions.add(new InsnNode(RETURN));
         }
     };
-    private static Transformer.MethodTransformer setStackInSlot = new Transformer.MethodTransformer("setInventorySlotContents", "func_70299_a", "(I"+itemStack.getASMTypeName()+")V")
+    private static Transformer.MethodTransformer setStackInSlot = new Transformer.MethodTransformer("setInventorySlotContents", "a", "(I"+itemStack.getObfASMTypeName()+")V")
     {
         @Override
         protected void modify(MethodNode node)
@@ -99,7 +99,7 @@ public class ChestsTransformer implements IClassTransformer, Opcodes
             node.instructions.add(new InsnNode(RETURN));
         }
     };
-    private static Transformer.MethodTransformer checkForAdjacentChests = new Transformer.MethodTransformer("checkForAdjacentChests","func_145979_i","()V")
+    private static Transformer.MethodTransformer checkForAdjacentChests = new Transformer.MethodTransformer("checkForAdjacentChests","i","()V")
     {
         @Override
         protected void modify(MethodNode node)
@@ -109,7 +109,7 @@ public class ChestsTransformer implements IClassTransformer, Opcodes
             node.instructions.insertBefore(first, new MethodInsnNode(INVOKESTATIC, chestHooks.getASMClassName(), "checkForAdjacentChests", "(" + chestTile.getASMTypeName() + ")V", false));
         }
     };
-    private static Transformer.MethodTransformer updateEntity = new Transformer.MethodTransformer("updateEntity","func_145845_h","()V")
+    private static Transformer.MethodTransformer updateEntity = new Transformer.MethodTransformer("updateEntity","h","()V")
     {
         @Override
         protected void modify(MethodNode node)
@@ -126,7 +126,17 @@ public class ChestsTransformer implements IClassTransformer, Opcodes
                 superCall = next;
             }
             node.instructions.add(new InsnNode(RETURN));
-            return;
+        }
+    };
+    private static Transformer.MethodTransformer getInventoryName = new Transformer.MethodTransformer("getInventoryName", "b", "()Ljava/lang/String;")
+    {
+        @Override
+        protected void modify(MethodNode node)
+        {
+            node.instructions.clear();
+            node.instructions.add(new VarInsnNode(ALOAD, 0));
+            node.instructions.add(new MethodInsnNode(INVOKESTATIC, chestHooks.getASMClassName(), "getInventoryName", "("+chestTile.getASMTypeName()+")Ljava/lang/String;",false));
+            node.instructions.add(new InsnNode(ARETURN));
         }
     };
     private static Transformer.FieldTransformer adjacentChest = new Transformer.FieldTransformer(Transformer.NODE_ADD, Transformer.Access.PUBLIC, new ASMString("adjacentChest"), chestTile.getASMTypeName())
@@ -145,7 +155,7 @@ public class ChestsTransformer implements IClassTransformer, Opcodes
             return new FieldNode(ACC_PUBLIC, name.getText(), forgeDirection.getASMTypeName(), null, null);
         }
     };
-    private static Transformer.MethodTransformer getIInventory = new Transformer.MethodTransformer("func_149951_m", "("+world.getASMTypeName()+"III)"+iInventory.getASMTypeName())
+    private static Transformer.MethodTransformer getIInventory = new Transformer.MethodTransformer("func_149951_m", "m", "("+world.getObfASMTypeName()+"III)"+iInventory.getObfASMTypeName())
     {
         @Override
         protected void modify(MethodNode node)
@@ -159,7 +169,7 @@ public class ChestsTransformer implements IClassTransformer, Opcodes
             node.instructions.add(new InsnNode(ARETURN));
         }
     };
-    private static Transformer.MethodTransformer breakBlock = new Transformer.MethodTransformer("breakBlock", "("+world.getASMTypeName()+"III"+block.getASMTypeName()+"I)V")
+    private static Transformer.MethodTransformer breakBlock = new Transformer.MethodTransformer("breakBlock", "a", "("+world.getObfASMTypeName()+"III"+block.getObfASMTypeName()+"I)V")
     {
         @Override
         protected void modify(MethodNode node)
@@ -219,7 +229,7 @@ public class ChestsTransformer implements IClassTransformer, Opcodes
 
     private enum ClassTransformers
     {
-        TILE(new Transformer.ClassTransformer(chestTile, getInventorySize, getStackInSlot, setStackInSlot, openInventory, closeInventory, decrStackSize, adjacentChest, direction, checkForAdjacentChests, updateEntity)),
+        TILE(new Transformer.ClassTransformer(chestTile, getInventorySize, getStackInSlot, decrStackSize, setStackInSlot, openInventory, closeInventory, getInventoryName, checkForAdjacentChests, updateEntity, adjacentChest, direction)),
         BLOCK(new Transformer.ClassTransformer(chestBlock, getIInventory, breakBlock)),
         HOOKS(new Transformer.ClassTransformer(chestHooks, setAdjacent, setDirection, getAdjacent, getDirection));
 
@@ -246,6 +256,7 @@ public class ChestsTransformer implements IClassTransformer, Opcodes
     static
     {
         for (ClassTransformers classTransformer : ClassTransformers.values()) classMap.put(classTransformer.getClassName(), classTransformer.getTransformer());
+        Transformer.log.info((ASMString.OBFUSCATED ? "O": "Deo") + "bfuscated environment detected");
     }
 
     @Override

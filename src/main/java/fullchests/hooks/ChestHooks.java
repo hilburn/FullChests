@@ -1,6 +1,6 @@
-package expansivechests.hooks;
+package fullchests.hooks;
 
-import expansivechests.asm.ChestsTransformer;
+import fullchests.asm.ChestsTransformer;
 import net.minecraft.block.BlockChest;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.ContainerChest;
@@ -20,6 +20,7 @@ public class ChestHooks
     public static int CHEST_SIZE;
     public static int DOUBLE_CHEST_SIZE;
     public static final EnumSet<ForgeDirection> adjacentPos = EnumSet.of(ForgeDirection.NORTH, ForgeDirection.EAST, ForgeDirection.SOUTH, ForgeDirection.WEST);
+    public static final EnumSet<ForgeDirection> lowerDirs = EnumSet.of(ForgeDirection.UNKNOWN, ForgeDirection.EAST, ForgeDirection.SOUTH);
 
     static
     {
@@ -37,24 +38,10 @@ public class ChestHooks
         ForgeDirection direction = getSafeDirection(chest);
         TileEntityChest adjacent = getAdjacentChest(chest);
         boolean higher = slot >= CHEST_SIZE && adjacent != null;
-        int size = adjacent != null ? DOUBLE_CHEST_SIZE : CHEST_SIZE;
-        if (slot < size)
-        {
-            if (higher) slot -= CHEST_SIZE;
-            switch (direction)
-            {
-                case SOUTH:
-                case EAST:
-                case UNKNOWN:
-                    if (higher) return adjacent.chestContents[slot];
-                    else return chest.chestContents[slot];
-                case NORTH:
-                case WEST:
-                    if (higher) return chest.chestContents[slot];
-                    else return adjacent.chestContents[slot];
-            }
-        }
-        return null;
+        boolean lower = lowerDirs.contains(direction);
+        TileEntityChest activeChest = adjacent == null? chest: higher && lower || !higher && !lower ? adjacent : chest;
+        slot %= CHEST_SIZE;
+        return activeChest.chestContents[slot];
     }
 
     public static IInventory getIInventory(World world, int x, int y, int z)
@@ -66,14 +53,8 @@ public class ChestHooks
             return null;
         if (world.isSideSolid(x, y + 1, z, ForgeDirection.DOWN))
             return null;
-        checkForAdjacentChests(chest);
+        checkForChests(chest);
         ForgeDirection dir = getSafeDirection(chest);
-//        if (dir == ForgeDirection.UNKNOWN)
-//        {
-//            chest.adjacentChestChecked = false;
-//            chest.checkForAdjacentChests();
-//            dir = getSafeDirection(chest);
-//        }
         if (world.isSideSolid(x + dir.offsetX, y + 1, dir.offsetY, ForgeDirection.DOWN))
             return null;
         return chest;
@@ -108,30 +89,22 @@ public class ChestHooks
         }
     }
 
+    public static String getInventoryName(TileEntityChest chest)
+    {
+        TileEntityChest adj = getAdjacent(chest);
+        return chest.hasCustomInventoryName() ? chest.customName : adj == null ? "container.chest" : adj.hasCustomInventoryName() ? chest.customName : "container.chestDouble";
+    }
+
     public static void setInventorySlotContents(TileEntityChest chest, int slot, ItemStack stack)
     {
         ForgeDirection direction = getSafeDirection(chest);
         TileEntityChest adjacent = getAdjacentChest(chest);
         boolean higher = slot >= CHEST_SIZE && adjacent != null;
-        int size = adjacent != null ? DOUBLE_CHEST_SIZE : CHEST_SIZE;
+        boolean lower = lowerDirs.contains(direction);
         if (stack!=null && stack.stackSize > chest.getInventoryStackLimit()) stack.stackSize = chest.getInventoryStackLimit();
-        if (slot < size)
-        {
-            if (higher) slot -= CHEST_SIZE;
-            switch (direction)
-            {
-                case SOUTH:
-                case EAST:
-                case UNKNOWN:
-                    if (higher) setStack(adjacent, slot, stack);
-                    else setStack(chest, slot, stack);
-                    break;
-                case NORTH:
-                case WEST:
-                    if (higher) setStack(chest, slot, stack);
-                    else setStack(adjacent, slot, stack);
-            }
-        }
+        TileEntityChest activeChest = adjacent == null? chest: higher && lower || !higher && !lower ? adjacent : chest;
+        slot %= CHEST_SIZE;
+        setStack(activeChest, slot, stack);
     }
 
     public static void updateEntity(TileEntityChest chest)
@@ -247,7 +220,7 @@ public class ChestHooks
 
     private static void close(TileEntityChest chest)
     {
-        if (chest.getBlockType() instanceof BlockChest)
+        if (chest.getWorldObj() != null && chest.getBlockType() instanceof BlockChest)
         {
             --chest.numPlayersUsing;
             chest.getWorldObj().addBlockEvent(chest.xCoord, chest.yCoord, chest.zCoord, chest.getBlockType(), 1, chest.numPlayersUsing);
@@ -258,14 +231,17 @@ public class ChestHooks
 
     private static void open(TileEntityChest chest)
     {
-        if (chest.numPlayersUsing < 0)
+        if (chest.getWorldObj() != null)
         {
-            chest.numPlayersUsing = 0;
+            if (chest.numPlayersUsing < 0)
+            {
+                chest.numPlayersUsing = 0;
+            }
+            ++chest.numPlayersUsing;
+            chest.getWorldObj().addBlockEvent(chest.xCoord, chest.yCoord, chest.zCoord, chest.getBlockType(), 1, chest.numPlayersUsing);
+            chest.getWorldObj().notifyBlocksOfNeighborChange(chest.xCoord, chest.yCoord, chest.zCoord, chest.getBlockType());
+            chest.getWorldObj().notifyBlocksOfNeighborChange(chest.xCoord, chest.yCoord - 1, chest.zCoord, chest.getBlockType());
         }
-        ++chest.numPlayersUsing;
-        chest.getWorldObj().addBlockEvent(chest.xCoord, chest.yCoord, chest.zCoord, chest.getBlockType(), 1, chest.numPlayersUsing);
-        chest.getWorldObj().notifyBlocksOfNeighborChange(chest.xCoord, chest.yCoord, chest.zCoord, chest.getBlockType());
-        chest.getWorldObj().notifyBlocksOfNeighborChange(chest.xCoord, chest.yCoord - 1, chest.zCoord, chest.getBlockType());
     }
 
     private static void setStack(TileEntityChest chest, int slot, ItemStack stack)
@@ -319,24 +295,24 @@ public class ChestHooks
         if (dir == null)
         {
             checkForChests(chest);
-            return ForgeDirection.UNKNOWN;
+            return getDirection(chest);
         }
         return dir;
     }
 
     private static ForgeDirection getDirection(TileEntityChest chest)
     {
-        return null;
+        return ForgeDirection.UNKNOWN;
     }
 
     private static void setDirection(TileEntityChest chest, ForgeDirection dir)
     {
-
+        chest.adjacentChestChecked = false;
     }
 
     private static TileEntityChest getAdjacent(TileEntityChest chest)
     {
-        return null;
+        return new TileEntityChest();
     }
 
     private static void setAdjacent(TileEntityChest chest, TileEntityChest adj)

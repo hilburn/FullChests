@@ -1,6 +1,6 @@
 package hilburnlib.asm;
 
-import expansivechests.reference.Reference;
+import fullchests.reference.Reference;
 import hilburnlib.asm.obfuscation.ASMString;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
