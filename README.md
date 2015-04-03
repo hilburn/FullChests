@@ -1,4 +1,4 @@
-Expansive Chests
+Full Chests
 =========
 Fixes the issues with Vanilla double chests and modded Minecraft (Currently Unstable)
 
