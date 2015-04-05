@@ -77,8 +77,7 @@ allprojects {
     jar {
         manifest {
             attributes 'FMLCorePlugin': 'fullchests.asm.LoadingPlugin'
-            //attributes 'FMLCorePluginContainsFMLMod': 'false'
-            attributes 'FMLAT': 'fullchests_at.cfg'
+            attributes 'FMLCorePluginContainsFMLMod': 'true'
         }
         dependsOn ":copyBuildXml"
         destinationDir = file (rootProject.getRootDir().getPath() + '/output')

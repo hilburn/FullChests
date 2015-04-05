@@ -1,11 +1,10 @@
 package fullchests.asm;
 
-import hilburnlib.asm.ASMHelper;
 import hilburnlib.asm.Transformer;
 import hilburnlib.asm.obfuscation.ASMString;
 import net.minecraft.launchwrapper.IClassTransformer;
-import net.minecraftforge.common.util.ForgeDirection;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
 import java.util.HashMap;
@@ -14,148 +13,88 @@ import java.util.Map;
 public class ChestsTransformer implements IClassTransformer, Opcodes
 {
     private static ASMString chestHooks = new ASMString("fullchests.hooks.ChestHooks");
-    private static ASMString chestTile = new ASMString.ASMObfString("net.minecraft.tileentity.TileEntityChest","aow");
+    private static ASMString fullChest = new ASMString("fullchests.tileentity.TileEntityFullChest");
+    private static ASMString chestTile = new ASMString.ASMObfString("net.minecraft.tileentity.TileEntityChest", "aow");
     private static ASMString chestBlock = new ASMString.ASMObfString("net.minecraft.block.BlockChest", "ajx");
-    private static ASMString forgeDirection = new ASMString(ForgeDirection.class);
     private static ASMString itemStack = new ASMString.ASMObfString("net.minecraft.item.ItemStack", "add");
-    private static ASMString world = new ASMString.ASMObfString("net.minecraft.world.World", "ahb");
-    private static ASMString iInventory = new ASMString.ASMObfString("net.minecraft.inventory.IInventory", "rb");
-    private static ASMString block = new ASMString.ASMObfString("net.minecraft.block.Block","aji");
+    private static ASMString entityLivingBase = new ASMString.ASMObfString("net.minecraft.entity.EntityLivingBase", "sv");
+    public static ASMString world = new ASMString.ASMObfString("net.minecraft.world.World", "ahb");
+    public static ASMString iInventory = new ASMString.ASMObfString("net.minecraft.inventory.IInventory", "rb");
+    private static ASMString block = new ASMString.ASMObfString("net.minecraft.block.Block", "aji");
+    private static ASMString tileEntity = new ASMString.ASMObfString("net.minecraft.tileentity.TileEntity", "aor");
+    private static ASMString dispatcher = new ASMString.ASMObfString("net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher", "bmk");
+    private static ASMString ocelotAISit = new ASMString.ASMObfString("net.minecraft.entity.ai.EntityAIOcelotSit", "uw");
+    private static ASMString chestRenderer = new ASMString.ASMObfString("net.minecraft.client.renderer.tileentity.TileEntityChestRenderer", "bmm");
+    private static ASMString chestRenderHelper = new ASMString.ASMObfString("net.minecraft.client.renderer.tileentity.TileEntityRendererChestHelper", "bls");
+    private static ASMString fullChestRenderer = new ASMString("fullchests.tileentity.TileEntityFullChestRenderer");
 
-    public static int CHEST_SIZE;
-
-    private static Transformer.MethodTransformer getInventorySize = new Transformer.MethodTransformer("getSizeInventory", "a", "()I")
+    private static void overwrite(AbstractInsnNode node, ASMString find, ASMString replace)
     {
-        @Override
-        protected void modify(MethodNode node)
+        String className = find.getObfASMClassName();
+        if (node instanceof TypeInsnNode && (((TypeInsnNode)node).desc.equals(className)))
         {
-            int value = ((IntInsnNode)ASMHelper.findFirstInstructionWithOpcode(node, BIPUSH)).operand;
-            CHEST_SIZE = value;
-            node.instructions.clear();
-            node.instructions.add(new VarInsnNode(ALOAD,0));
-            node.instructions.add(new MethodInsnNode(INVOKESTATIC, chestHooks.getASMClassName(), "getInventorySize", "("+chestTile.getASMTypeName()+")I",false));
-            node.instructions.add(new InsnNode(IRETURN));
-        }
-    };
-
-    private static Transformer.MethodTransformer getStackInSlot = new Transformer.MethodTransformer("getStackInSlot", "a", "(I)"+itemStack.getObfASMTypeName())
-    {
-        @Override
-        protected void modify(MethodNode node)
+            ((TypeInsnNode)node).desc = replace.getObfASMClassName();
+        } else if (node instanceof FieldInsnNode)
         {
-            node.instructions.clear();
-            node.instructions.add(new VarInsnNode(ALOAD, 0));
-            node.instructions.add(new VarInsnNode(ILOAD, 1));
-            node.instructions.add(new MethodInsnNode(INVOKESTATIC, chestHooks.getASMClassName(), "getStackInSlot", "("+chestTile.getASMTypeName()+"I)"+itemStack.getASMTypeName(),false));
-            node.instructions.add(new InsnNode(ARETURN));
-        }
-    };
-    private static Transformer.MethodTransformer decrStackSize = new Transformer.MethodTransformer("decrStackSize", "a", "(II)"+itemStack.getObfASMTypeName())
-    {
-        @Override
-        protected void modify(MethodNode node)
+            if (((FieldInsnNode)node).owner.equals(className))
+                ((FieldInsnNode)node).owner = replace.getObfASMClassName();
+            else if (((FieldInsnNode)node).desc.equals(find.getObfASMTypeName()))
+                ((FieldInsnNode)node).desc = replace.getASMTypeName();
+        } else if (node instanceof MethodInsnNode)
         {
-            node.instructions.clear();
-            node.localVariables = null;
-            node.instructions.add(new VarInsnNode(ALOAD, 0));
-            node.instructions.add(new VarInsnNode(ILOAD, 1));
-            node.instructions.add(new VarInsnNode(ILOAD, 2));
-            node.instructions.add(new MethodInsnNode(INVOKESTATIC, chestHooks.getASMClassName(), "decrStackSize", "("+chestTile.getASMTypeName()+"II)"+itemStack.getASMTypeName(),false));
-            node.instructions.add(new InsnNode(ARETURN));
-        }
-    };
-    private static Transformer.MethodTransformer openInventory = new Transformer.MethodTransformer("openInventory", "f", "()V")
-    {
-        @Override
-        protected void modify(MethodNode node)
-        {
-            node.instructions.clear();
-            node.instructions.add(new VarInsnNode(ALOAD, 0));
-            node.instructions.add(new MethodInsnNode(INVOKESTATIC, chestHooks.getASMClassName(), "openInventory", "("+chestTile.getASMTypeName()+ ")V",false));
-            node.instructions.add(new InsnNode(RETURN));
-        }
-    };
-    private static Transformer.MethodTransformer closeInventory = new Transformer.MethodTransformer("closeInventory", "l_", "()V")
-    {
-        @Override
-        protected void modify(MethodNode node)
-        {
-            node.instructions.clear();
-            node.instructions.add(new VarInsnNode(ALOAD, 0));
-            node.instructions.add(new MethodInsnNode(INVOKESTATIC, chestHooks.getASMClassName(), "closeInventory", "("+chestTile.getASMTypeName()+ ")V",false));
-            node.instructions.add(new InsnNode(RETURN));
-        }
-    };
-    private static Transformer.MethodTransformer setStackInSlot = new Transformer.MethodTransformer("setInventorySlotContents", "a", "(I"+itemStack.getObfASMTypeName()+")V")
-    {
-        @Override
-        protected void modify(MethodNode node)
-        {
-            node.instructions.clear();
-            node.instructions.add(new VarInsnNode(ALOAD, 0));
-            node.instructions.add(new VarInsnNode(ILOAD, 1));
-            node.instructions.add(new VarInsnNode(ALOAD, 2));
-            node.instructions.add(new MethodInsnNode(INVOKESTATIC, chestHooks.getASMClassName(), "setInventorySlotContents", "("+chestTile.getASMTypeName()+"I"+itemStack.getASMTypeName()+")V",false));
-            node.instructions.add(new InsnNode(RETURN));
-        }
-    };
-    private static Transformer.MethodTransformer checkForAdjacentChests = new Transformer.MethodTransformer("checkForAdjacentChests","i","()V")
-    {
-        @Override
-        protected void modify(MethodNode node)
-        {
-            AbstractInsnNode first = node.instructions.getFirst();
-            node.instructions.insertBefore(first, new VarInsnNode(ALOAD, 0));
-            node.instructions.insertBefore(first, new MethodInsnNode(INVOKESTATIC, chestHooks.getASMClassName(), "checkForAdjacentChests", "(" + chestTile.getASMTypeName() + ")V", false));
-        }
-    };
-    private static Transformer.MethodTransformer updateEntity = new Transformer.MethodTransformer("updateEntity","h","()V")
-    {
-        @Override
-        protected void modify(MethodNode node)
-        {
-            AbstractInsnNode superCall = ASMHelper.findFirstInstructionWithOpcode(node, INVOKESPECIAL).getNext();
-            node.localVariables = null;
-            node.instructions.insertBefore(superCall, new VarInsnNode(ALOAD, 0));
-            node.instructions.insertBefore(superCall, new MethodInsnNode(INVOKESTATIC, chestHooks.getASMClassName(), "updateEntity", "(" + chestTile.getASMTypeName() + ")V", false));
-            AbstractInsnNode next;
-            while (superCall != null)
+            if (((MethodInsnNode)node).owner.equals(className))
             {
-                next = superCall.getNext();
-                node.instructions.remove(superCall);
-                superCall = next;
+                ((MethodInsnNode)node).owner = replace.getASMClassName();
+            } else if (((MethodInsnNode)node).name.equals(find.getText()))
+            {
+                ((MethodInsnNode)node).name = replace.getText();
             }
-            node.instructions.add(new InsnNode(RETURN));
         }
-    };
-    private static Transformer.MethodTransformer getInventoryName = new Transformer.MethodTransformer("getInventoryName", "b", "()Ljava/lang/String;")
+    }
+
+    private static Transformer.MethodTransformer tileEntityInit = new Transformer.MethodTransformer("<clinit>", "()V")
     {
         @Override
         protected void modify(MethodNode node)
         {
-            node.instructions.clear();
-            node.instructions.add(new VarInsnNode(ALOAD, 0));
-            node.instructions.add(new MethodInsnNode(INVOKESTATIC, chestHooks.getASMClassName(), "getInventoryName", "("+chestTile.getASMTypeName()+")Ljava/lang/String;",false));
-            node.instructions.add(new InsnNode(ARETURN));
+            AbstractInsnNode insnNode = node.instructions.getFirst();
+            while (insnNode != null)
+            {
+                if (insnNode instanceof LdcInsnNode && ((LdcInsnNode)insnNode).cst instanceof Type)
+                {
+                    if (((Type)((LdcInsnNode)insnNode).cst).getDescriptor().equals(chestTile.getObfASMTypeName()))
+                    {
+                        ((LdcInsnNode)insnNode).cst = Type.getType(fullChest.getASMTypeName());
+                        return;
+                    }
+                }
+                insnNode = insnNode.getNext();
+            }
         }
     };
-    private static Transformer.FieldTransformer adjacentChest = new Transformer.FieldTransformer(Transformer.NODE_ADD, Transformer.Access.PUBLIC, new ASMString("adjacentChest"), chestTile.getASMTypeName())
+    private static Transformer.MethodTransformer rendererDispatcherInit = new Transformer.MethodTransformer("<init>", "()V")
     {
         @Override
-        protected FieldNode getNodeToAdd()
+        protected void modify(MethodNode node)
         {
-            return new FieldNode(ACC_PUBLIC, name.getText(), chestTile.getASMTypeName(), null, null);
+            AbstractInsnNode insnNode = node.instructions.getFirst();
+            while (insnNode != null)
+            {
+                if (insnNode instanceof LdcInsnNode)
+                {
+                    if (((Type)((LdcInsnNode)insnNode).cst).getDescriptor().equals(chestTile.getObfASMTypeName()))
+                    {
+                        ((LdcInsnNode)insnNode).cst = Type.getType(fullChest.getASMTypeName());
+                    }
+                } else
+                {
+                    overwrite(insnNode, chestRenderer, fullChestRenderer);
+                }
+                insnNode = insnNode.getNext();
+            }
         }
     };
-    private static Transformer.FieldTransformer direction = new Transformer.FieldTransformer(Transformer.NODE_ADD, Transformer.Access.PUBLIC, new ASMString("direction"), forgeDirection.getASMTypeName())
-    {
-        @Override
-        protected FieldNode getNodeToAdd()
-        {
-            return new FieldNode(ACC_PUBLIC, name.getText(), forgeDirection.getASMTypeName(), null, null);
-        }
-    };
-    private static Transformer.MethodTransformer getIInventory = new Transformer.MethodTransformer("func_149951_m", "m", "("+world.getObfASMTypeName()+"III)"+iInventory.getObfASMTypeName())
+    private static Transformer.MethodTransformer getTileEntity = new Transformer.MethodTransformer("func_149951_m", "m", "(" + world.getObfASMTypeName() + "III)" + iInventory.getObfASMTypeName())
     {
         @Override
         protected void modify(MethodNode node)
@@ -165,73 +104,165 @@ public class ChestsTransformer implements IClassTransformer, Opcodes
             node.instructions.add(new VarInsnNode(ILOAD, 2));
             node.instructions.add(new VarInsnNode(ILOAD, 3));
             node.instructions.add(new VarInsnNode(ILOAD, 4));
-            node.instructions.add(new MethodInsnNode(INVOKESTATIC, chestHooks.getASMClassName(), "getIInventory", "("+world.getASMTypeName()+"III)"+iInventory.getASMTypeName(),false));
-            node.instructions.add(new InsnNode(ARETURN));
-        }
-    };
-    private static Transformer.MethodTransformer breakBlock = new Transformer.MethodTransformer("breakBlock", "a", "("+world.getObfASMTypeName()+"III"+block.getObfASMTypeName()+"I)V")
-    {
-        @Override
-        protected void modify(MethodNode node)
-        {
-            AbstractInsnNode inject = ASMHelper.findFirstInstructionWithOpcode(node, IFNULL).getNext();
-            node.instructions.insertBefore(inject, new VarInsnNode(ALOAD, 7));
-            node.instructions.insertBefore(inject, new InsnNode(ACONST_NULL));
-            node.instructions.insertBefore(inject, new FieldInsnNode(PUTFIELD, chestTile.getASMClassName(), "adjacentChest", chestTile.getASMTypeName()));
-        }
-    };
-    private static Transformer.MethodTransformer getDirection = new Transformer.MethodTransformer("getDirection", "("+chestTile.getASMTypeName()+")"+forgeDirection.getASMTypeName())
-    {
-        @Override
-        protected void modify(MethodNode node)
-        {
-            node.instructions.clear();
-            node.instructions.add(new VarInsnNode(ALOAD, 0));
-            node.instructions.add(new FieldInsnNode(GETFIELD, chestTile.getASMClassName(), "direction", forgeDirection.getASMTypeName()));
-            node.instructions.add(new InsnNode(ARETURN));
-        }
-    };
-    private static Transformer.MethodTransformer setDirection = new Transformer.MethodTransformer("setDirection", "("+chestTile.getASMTypeName()+forgeDirection.getASMTypeName()+")V")
-    {
-        @Override
-        protected void modify(MethodNode node)
-        {
-            node.instructions.clear();
-            node.instructions.add(new VarInsnNode(ALOAD, 0));
+            node.instructions.add(new MethodInsnNode(INVOKESTATIC, chestBlock.getObfASMClassName(), new ASMString.ASMObfString("func_149953_o", "o").getText(), "(" + world.getObfASMTypeName() + "III)Z", false));
             node.instructions.add(new VarInsnNode(ALOAD, 1));
-            node.instructions.add(new FieldInsnNode(PUTFIELD, chestTile.getASMClassName(), "direction", forgeDirection.getASMTypeName()));
-            node.instructions.add(new InsnNode(RETURN));
-        }
-    };
-    private static Transformer.MethodTransformer getAdjacent = new Transformer.MethodTransformer("getAdjacent", "("+chestTile.getASMTypeName()+")"+chestTile.getASMTypeName())
-    {
-        @Override
-        protected void modify(MethodNode node)
-        {
-            node.instructions.clear();
-            node.instructions.add(new VarInsnNode(ALOAD, 0));
-            node.instructions.add(new FieldInsnNode(GETFIELD, chestTile.getASMClassName(), "adjacentChest", chestTile.getASMTypeName()));
+            node.instructions.add(new VarInsnNode(ILOAD, 2));
+            node.instructions.add(new VarInsnNode(ILOAD, 3));
+            node.instructions.add(new VarInsnNode(ILOAD, 4));
+            node.instructions.add(new MethodInsnNode(INVOKESTATIC, chestHooks.getASMClassName(), "getIInventory", "(Z" + world.getASMTypeName() + "III)" + iInventory.getASMTypeName(), false));
             node.instructions.add(new InsnNode(ARETURN));
         }
     };
-    private static Transformer.MethodTransformer setAdjacent = new Transformer.MethodTransformer("setAdjacent", "("+chestTile.getASMTypeName()+chestTile.getASMTypeName()+")V")
+    private static Transformer.MethodTransformer onBlockPlacedBy = new Transformer.MethodTransformer("onBlockPlacedBy", "a", "(" + world.getObfASMTypeName() + "III" + entityLivingBase.getObfASMTypeName() + itemStack.getObfASMTypeName() + ")V")
     {
         @Override
         protected void modify(MethodNode node)
         {
-            node.instructions.clear();
-            node.instructions.add(new VarInsnNode(ALOAD, 0));
-            node.instructions.add(new VarInsnNode(ALOAD, 1));
-            node.instructions.add(new FieldInsnNode(PUTFIELD, chestTile.getASMClassName(), "adjacentChest", chestTile.getASMTypeName()));
-            node.instructions.add(new InsnNode(RETURN));
+            AbstractInsnNode insnNode = node.instructions.getFirst();
+            while (insnNode != null)
+            {
+                if (insnNode instanceof MethodInsnNode && insnNode.getOpcode() == INVOKEVIRTUAL)
+                {
+                    if (((MethodInsnNode)insnNode).owner.equals(chestTile.getObfASMClassName()))
+                    {
+                        node.instructions.insertBefore(insnNode, new MethodInsnNode(INVOKEVIRTUAL, fullChest.getASMClassName(), "setCustomName", "(Ljava/lang/String;)V", false));
+                        node.instructions.remove(insnNode);
+                    }
+                } else
+                {
+                    overwrite(insnNode, chestTile, fullChest);
+                }
+                insnNode = insnNode.getNext();
+            }
+            node.localVariables = null;
+        }
+    };
+    private static Transformer.MethodTransformer onNeighbourBlockChanged = new Transformer.MethodTransformer("onNeighborBlockChange", "a", "(" + world.getObfASMTypeName() + "III" + block.getObfASMTypeName() + ")V")
+    {
+        @Override
+        protected void modify(MethodNode node)
+        {
+            AbstractInsnNode insnNode = node.instructions.getFirst();
+            while (insnNode != null)
+            {
+                if (insnNode instanceof MethodInsnNode && insnNode.getOpcode() == INVOKEVIRTUAL && ((MethodInsnNode)insnNode).owner.equals(chestTile.getObfASMClassName()))
+                {
+                    node.instructions.insertBefore(insnNode, new MethodInsnNode(INVOKEVIRTUAL, fullChest.getASMClassName(), new ASMString.ASMObfString("updateContainingBlockInfo", "func_145836_u").getText(), "()V", false));
+                    node.instructions.remove(insnNode);
+                    break;
+                }
+                insnNode = insnNode.getNext();
+            }
+            node.localVariables = null;
+        }
+    };
+    public static Transformer.MethodTransformer cleanupChest = new Transformer.MethodTransformer("", "")
+    {
+        @Override
+        protected void modify(MethodNode node)
+        {
+            AbstractInsnNode insnNode = node.instructions.getFirst();
+            while (insnNode != null)
+            {
+                overwrite(insnNode, chestTile, fullChest);
+                insnNode = insnNode.getNext();
+            }
+            node.localVariables = null;
+        }
+
+        @Override
+        public boolean transform(ClassNode classNode)
+        {
+            for (MethodNode node : classNode.methods)
+            {
+                modify(node);
+            }
+            return true;
+        }
+
+        @Override
+        protected void log()
+        {
+        }
+    };
+    private static Transformer.MethodTransformer breakBlock = new Transformer.MethodTransformer("breakBlock", "a", "(" + world.getObfASMTypeName() + "III" + block.getObfASMTypeName() + "I)V")
+    {
+        @Override
+        protected void modify(MethodNode node)
+        {
+            AbstractInsnNode insnNode = node.instructions.getLast();
+            while (insnNode != null)
+            {
+                if (insnNode instanceof VarInsnNode && ((VarInsnNode)insnNode).var == 0)
+                {
+                    insnNode = insnNode.getPrevious();
+                    break;
+                }
+                insnNode = insnNode.getPrevious();
+            }
+            while (insnNode != null)
+            {
+                AbstractInsnNode next = insnNode.getPrevious();
+                node.instructions.remove(insnNode);
+                insnNode = next;
+            }
+            insnNode = node.instructions.getFirst();
+            node.instructions.insertBefore(insnNode, new VarInsnNode(ALOAD, 0));
+            node.instructions.insertBefore(insnNode, new VarInsnNode(ALOAD, 1));
+            node.instructions.insertBefore(insnNode, new VarInsnNode(ILOAD, 2));
+            node.instructions.insertBefore(insnNode, new VarInsnNode(ILOAD, 3));
+            node.instructions.insertBefore(insnNode, new VarInsnNode(ILOAD, 4));
+            node.instructions.insertBefore(insnNode, new MethodInsnNode(INVOKESTATIC, chestHooks.getASMClassName(), "breakBlock", "(" + block.getASMTypeName() + world.getASMTypeName() + "III)V", false));
+
+        }
+    };
+    private static Transformer.MethodTransformer ocelotSit = new Transformer.MethodTransformer("func_151486_a", "a", "(" + world.getObfASMTypeName() + "III)Z")
+    {
+        @Override
+        protected void modify(MethodNode node)
+        {
+            AbstractInsnNode insnNode = node.instructions.getFirst();
+            while (insnNode != null)
+            {
+                overwrite(insnNode, chestTile, fullChest);
+                insnNode = insnNode.getNext();
+            }
+            node.localVariables = null;
         }
     };
 
     private enum ClassTransformers
     {
-        TILE(new Transformer.ClassTransformer(chestTile, getInventorySize, getStackInSlot, decrStackSize, setStackInSlot, openInventory, closeInventory, getInventoryName, checkForAdjacentChests, updateEntity, adjacentChest, direction)),
-        BLOCK(new Transformer.ClassTransformer(chestBlock, getIInventory, breakBlock)),
-        HOOKS(new Transformer.ClassTransformer(chestHooks, setAdjacent, setDirection, getAdjacent, getDirection));
+        //TILE(new Transformer.ClassTransformer(chestTile, getInventorySize, getStackInSlot, decrStackSize, setStackInSlot, openInventory, closeInventory, getInventoryName, checkForAdjacentChests, updateEntity, adjacentChest, direction)),
+        BLOCK(new Transformer.ClassTransformer(chestBlock, getTileEntity, breakBlock, onBlockPlacedBy, onNeighbourBlockChanged, cleanupChest)),
+        TILE_ENTITY(new Transformer.ClassTransformer(tileEntity, tileEntityInit)),
+        DISPATCHER(new Transformer.ClassTransformer(dispatcher, rendererDispatcherInit)),
+        OCELOT_SIT(new Transformer.ClassTransformer(ocelotAISit, ocelotSit)),
+        RENDER_HELPER(new Transformer.ClassTransformer(chestRenderHelper)
+        {
+            @Override
+            public boolean transform(ClassNode classNode)
+            {
+                for (FieldNode field : classNode.fields)
+                {
+                    if (field.desc.equals(chestTile.getObfASMTypeName()))
+                    {
+                        field.desc = fullChest.getASMTypeName();
+                    }
+                }
+                for (MethodNode methodNode : classNode.methods)
+                {
+                    AbstractInsnNode node = methodNode.instructions.getFirst();
+                    while (node != null)
+                    {
+                        overwrite(node, chestTile, fullChest);
+                        node = node.getNext();
+                    }
+                    methodNode.localVariables = null;
+                }
+                return true;
+            }
+        });
 
         private Transformer.ClassTransformer transformer;
 
@@ -255,8 +286,14 @@ public class ChestsTransformer implements IClassTransformer, Opcodes
 
     static
     {
-        for (ClassTransformers classTransformer : ClassTransformers.values()) classMap.put(classTransformer.getClassName(), classTransformer.getTransformer());
-        Transformer.log.info((ASMString.OBFUSCATED ? "O": "Deo") + "bfuscated environment detected");
+        for (ClassTransformers classTransformer : ClassTransformers.values())
+            classMap.put(classTransformer.getClassName(), classTransformer.getTransformer());
+        Transformer.log.info((ASMString.OBFUSCATED ? "O" : "Deo") + "bfuscated environment detected");
+    }
+
+    public static void register(Transformer.ClassTransformer transformer)
+    {
+        classMap.put(transformer.getClassName(), transformer);
     }
 
     @Override

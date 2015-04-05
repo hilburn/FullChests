@@ -32,6 +32,11 @@ public class ASMString
         return text.replaceAll("\\.","/");
     }
 
+    public String getObfASMClassName()
+    {
+        return getASMClassName();
+    }
+
     public String getASMTypeName()
     {
         return "L" + getASMClassName() +";";
@@ -55,6 +60,12 @@ public class ASMString
         public String getObfASMTypeName()
         {
             return OBFUSCATED? "L" + obfText +";": getASMTypeName();
+        }
+
+        @Override
+        public String getObfASMClassName()
+        {
+            return OBFUSCATED? obfText : getASMClassName();
         }
 
         @Override
