@@ -74,7 +74,7 @@ public class TileEntityFullChest extends TileEntity implements IInventory
                 {
                     IInventory iinventory = ((ContainerChest)entityplayer.openContainer).getLowerChestInventory();
 
-                    if (iinventory == this || iinventory instanceof InventoryLargeChest && ((InventoryLargeChest)iinventory).isPartOfLargeChest(this))
+                    if (iinventory == this || iinventory == adjacent)
                     {
                         ++this.numPlayersUsing;
                     }
